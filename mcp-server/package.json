@@ -1,0 +1,22 @@
+{
+  "name": "slack-kb-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server exposing the Slack Knowledge Base to AI assistants",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js"
+  },
+  "bin": {
+    "slack-kb-mcp": "./build/index.js"
+  },
+  "files": ["build"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@opensearch-project/opensearch": "^3.6.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "typescript": "^5.8.3"
+  }
+}

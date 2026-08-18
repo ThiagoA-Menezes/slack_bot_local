@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+mcp-server/node_modules/
+mcp-server/build/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
