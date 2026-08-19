@@ -7,19 +7,22 @@
  *   list_channels         — list channels present in the knowledge base
  *   search_knowledge      — k-NN vector search; results include authors + dates
  *   get_channel_summary   — all summaries for a channel, with authors + dates
- *   ask_question          — RAG: vector retrieval + local Ollama generation
+ *   ask_question          — RAG with semantic cache; returns cached answer when
+ *                           a similar question was already answered before
  *   post_message          — post a reply back into a Slack channel or thread
+ *   top_queries           — opportunity mapping: most-asked topics by hit count
  *
  * All AI inference is local — no cloud credentials required.
  *
  * Configuration (environment variables):
- *   OPENSEARCH_URL        — OpenSearch base URL (default: http://localhost:9200)
- *   OPENSEARCH_USER       — Basic-auth username (optional)
- *   OPENSEARCH_PASSWORD   — Basic-auth password (optional)
- *   OLLAMA_URL            — Ollama base URL (default: http://localhost:11434)
- *   OLLAMA_EMBED_MODEL    — Embedding model (default: nomic-embed-text)
- *   OLLAMA_GEN_MODEL      — Generation model (default: llama3.2)
- *   SLACK_BOT_TOKEN       — Slack bot token (required only for post_message)
+ *   OPENSEARCH_URL              — OpenSearch base URL (default: http://localhost:9200)
+ *   OPENSEARCH_USER             — Basic-auth username (optional)
+ *   OPENSEARCH_PASSWORD         — Basic-auth password (optional)
+ *   OLLAMA_URL                  — Ollama base URL (default: http://localhost:11434)
+ *   OLLAMA_EMBED_MODEL          — Embedding model (default: nomic-embed-text)
+ *   OLLAMA_GEN_MODEL            — Generation model (default: llama3.2)
+ *   SLACK_BOT_TOKEN             — Slack bot token (required only for post_message)
+ *   CACHE_SIMILARITY_THRESHOLD  — cosine similarity cutoff for cache hits (default: 0.92)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -32,10 +35,12 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 const OS_INDEX        = "slack_knowledge";
+const CACHE_INDEX     = "response_cache";
 const OLLAMA_URL      = process.env.OLLAMA_URL        ?? "http://localhost:11434";
 const EMBED_MODEL     = process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
 const GEN_MODEL       = process.env.OLLAMA_GEN_MODEL   ?? "llama3.2";
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN    ?? "";
+const CACHE_THRESHOLD = parseFloat(process.env.CACHE_SIMILARITY_THRESHOLD ?? "0.92");
 
 // ---------------------------------------------------------------------------
 // OpenSearch client
@@ -144,10 +149,100 @@ async function knnSearch(vector: number[], k: number, channel?: string): Promise
 }
 
 // ---------------------------------------------------------------------------
+// Response cache helpers
+// ---------------------------------------------------------------------------
+
+interface CacheDoc {
+  cache_id:    string;
+  query_type:  string;
+  channel?:    string;
+  query_text:  string;
+  answer_text: string;
+  sources:     unknown[];
+  hit_count:   number;
+}
+
+async function cacheLookup(
+  vector: number[],
+  queryType: string,
+  channel?: string,
+): Promise<{ hit: CacheDoc; score: number; docId: string } | null> {
+  const mustClauses: unknown[] = [{ term: { query_type: queryType } }];
+  if (channel) {
+    mustClauses.push({ term: { channel } });
+  } else {
+    mustClauses.push({ bool: { must_not: { exists: { field: "channel" } } } });
+  }
+
+  try {
+    const resp = await (osClient.search as (p: Record<string, unknown>) => Promise<{ body: Record<string, unknown> }>)({
+      index: CACHE_INDEX,
+      body: {
+        size: 1,
+        query: { knn: { embedding: { vector, k: 1 } } },
+        post_filter: { bool: { must: mustClauses } },
+        _source: ["cache_id", "query_type", "channel", "query_text", "answer_text", "sources", "hit_count"],
+      },
+    });
+    const rawHits = (resp.body as Record<string, unknown>);
+    const hits = ((rawHits["hits"] as Record<string, unknown>)?.["hits"] ?? []) as Array<{ _id: string; _score: number; _source: CacheDoc }>;
+    if (!hits.length) return null;
+    const top = hits[0];
+    if (top._score < CACHE_THRESHOLD) return null;
+    return { hit: top._source, score: top._score, docId: top._id };
+  } catch {
+    return null;
+  }
+}
+
+async function cacheIncrement(docId: string, currentCount: number): Promise<void> {
+  try {
+    await osClient.update({
+      index: CACHE_INDEX,
+      id: docId,
+      body: { doc: { hit_count: currentCount + 1, last_hit_at: new Date().toISOString() } },
+    });
+  } catch { /* best-effort */ }
+}
+
+async function cacheStore(
+  query: string,
+  queryType: string,
+  answer: string,
+  sources: unknown[],
+  vector: number[],
+  channel?: string,
+): Promise<void> {
+  const raw = `${queryType}:${channel ?? ""}:${query.toLowerCase().trim()}`;
+  const cacheId = await sha256Prefix(raw);
+  const now = new Date().toISOString();
+  const doc: Record<string, unknown> = {
+    cache_id:    cacheId,
+    query_type:  queryType,
+    query_text:  query,
+    answer_text: answer,
+    sources,
+    hit_count:   0,
+    embedding:   vector,
+    created_at:  now,
+    last_hit_at: now,
+  };
+  if (channel) doc["channel"] = channel;
+  try {
+    await osClient.index({ index: CACHE_INDEX, id: cacheId, body: doc });
+  } catch { /* best-effort */ }
+}
+
+async function sha256Prefix(text: string): Promise<string> {
+  const { createHash } = await import("node:crypto");
+  return createHash("sha256").update(text).digest("hex").slice(0, 24);
+}
+
+// ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: "slack-kb", version: "0.4.0" });
+const server = new McpServer({ name: "slack-kb", version: "0.5.0" });
 
 // ── Tool 1: list_channels ───────────────────────────────────────────────────
 
@@ -217,7 +312,8 @@ server.registerTool(
   {
     description:
       "Return stored knowledge entries for a Slack channel, newest-first. " +
-      "Each entry shows authors and date range.",
+      "Each entry shows authors and date range. " +
+      "Results are cached semantically — repeated or similar requests are served instantly.",
     inputSchema: z.object({
       channel: z.string().describe("Slack channel name (without #)"),
       limit:   z.number().int().min(1).max(50).default(10).describe("Max entries"),
@@ -225,6 +321,23 @@ server.registerTool(
   },
   async ({ channel, limit }) => {
     try {
+      // ── Cache lookup ─────────────────────────────────────────────
+      const vector    = await embedText(channel);
+      const cacheResult = await cacheLookup(vector, "get_channel_summary", channel);
+      if (cacheResult) {
+        const { hit, score } = cacheResult;
+        await cacheIncrement(cacheResult.docId, hit.hit_count);
+        return {
+          content: [{
+            type: "text" as const,
+            text:
+              `⚡ *Resposta em cache* (similaridade=${score.toFixed(4)}, consultado ${hit.hit_count + 1}x)\n\n` +
+              hit.answer_text,
+          }],
+        };
+      }
+
+      // ── Fetch from OpenSearch ────────────────────────────────────
       const resp = await osClient.search({
         index: OS_INDEX,
         body: {
@@ -245,7 +358,12 @@ server.registerTool(
           h._source.summary
         );
       });
-      return { content: [{ type: "text" as const, text: `Entries for #${channel} (${hits.length}):\n\n` + parts.join("\n\n---\n\n") }] };
+      const answer = `Entries for #${channel} (${hits.length}):\n\n` + parts.join("\n\n---\n\n");
+
+      // ── Store in cache ───────────────────────────────────────────
+      await cacheStore(channel, "get_channel_summary", answer, [], vector, channel);
+
+      return { content: [{ type: "text" as const, text: answer }] };
     } catch (err) {
       return { content: [{ type: "text" as const, text: `Error: ${String(err)}` }], isError: true };
     }
@@ -258,8 +376,9 @@ server.registerTool(
   "ask_question",
   {
     description:
-      "Answer a question using RAG: embeds with Ollama, retrieves relevant " +
-      "knowledge entries (with authors and dates), then generates a grounded " +
+      "Answer a question using RAG with semantic cache: embeds with Ollama, checks " +
+      "the response cache first (returns instantly if a similar question was already " +
+      "answered), otherwise retrieves relevant knowledge entries and generates a grounded " +
       "answer using a local Ollama model. 100% local — no cloud credentials needed.",
     inputSchema: z.object({
       question:        z.string().describe("Natural language question"),
@@ -271,8 +390,31 @@ server.registerTool(
   async ({ question, channel, context_entries }) => {
     try {
       const vector = await embedText(question);
-      const hits   = await knnSearch(vector, context_entries, channel);
 
+      // ── 1. Cache lookup ──────────────────────────────────────────
+      const cacheResult = await cacheLookup(vector, "ask_question", channel);
+      if (cacheResult) {
+        const { hit, score } = cacheResult;
+        await cacheIncrement(cacheResult.docId, hit.hit_count);
+        const sourcesText = Array.isArray(hit.sources) && hit.sources.length
+          ? "\n\n**Sources (cached):**\n" + (hit.sources as Array<Record<string, unknown>>).map(
+              (s) => `• #${s["channel_name"]}  ${s["oldest_dt"] ?? ""} – ${s["newest_dt"] ?? ""}  (${(s["authors"] as string[] | undefined)?.join(", ") ?? "unknown"})`
+            ).join("\n")
+          : "";
+        return {
+          content: [{
+            type: "text" as const,
+            text:
+              `⚡ *Resposta em cache* (similaridade=${score.toFixed(4)}, consultado ${hit.hit_count + 1}x)\n` +
+              `*Pergunta original:* ${hit.query_text}\n\n` +
+              `**Answer:**\n${hit.answer_text}` +
+              sourcesText,
+          }],
+        };
+      }
+
+      // ── 2. RAG: retrieve + generate ──────────────────────────────
+      const hits = await knnSearch(vector, context_entries, channel);
       if (hits.length === 0) {
         return { content: [{ type: "text" as const, text: "No results. Run the ingest pipeline first." }] };
       }
@@ -283,12 +425,20 @@ server.registerTool(
       }).join("\n\n---\n\n");
 
       const answer  = await ollamaGenerate(QA_PROMPT(context, question));
-      const sources = hits.map((h) => {
-        const authors = h._source.authors?.length ? h._source.authors.join(", ") : "unknown";
-        return `• #${h._source.channel_name}  ${h._source.oldest_dt} – ${h._source.newest_dt}  (${authors})`;
-      }).join("\n");
+      const sources = hits.map((h) => ({
+        channel_name: h._source.channel_name,
+        oldest_dt:    h._source.oldest_dt,
+        newest_dt:    h._source.newest_dt,
+        authors:      h._source.authors,
+      }));
+      const sourcesText = sources.map(
+        (s) => `• #${s.channel_name}  ${s.oldest_dt} – ${s.newest_dt}  (${s.authors?.join(", ") ?? "unknown"})`
+      ).join("\n");
 
-      return { content: [{ type: "text" as const, text: `**Answer:**\n${answer}\n\n**Sources:**\n${sources}` }] };
+      // ── 3. Store in cache ────────────────────────────────────────
+      await cacheStore(question, "ask_question", answer, sources, vector, channel);
+
+      return { content: [{ type: "text" as const, text: `**Answer:**\n${answer}\n\n**Sources:**\n${sourcesText}` }] };
     } catch (err) {
       return { content: [{ type: "text" as const, text: `Error: ${String(err)}` }], isError: true };
     }
@@ -330,6 +480,64 @@ server.registerTool(
 
       return {
         content: [{ type: "text" as const, text: `✓ Message posted to #${channel}${thread_ts ? " (thread reply)" : ""}\n  ts: ${json.ts}` }],
+      };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${String(err)}` }], isError: true };
+    }
+  }
+);
+
+// ── Tool 6: top_queries ─────────────────────────────────────────────────────
+
+server.registerTool(
+  "top_queries",
+  {
+    description:
+      "Return the most-queried topics from the response cache, sorted by hit count. " +
+      "Useful for opportunity mapping — shows which subjects users ask about most.",
+    inputSchema: z.object({
+      query_type: z.enum(["ask_question", "get_channel_summary"]).optional()
+        .describe("Filter by query type (omit for all types)"),
+      size: z.number().int().min(1).max(100).default(20)
+        .describe("Number of entries to return"),
+    }),
+  },
+  async ({ query_type, size }) => {
+    try {
+      const body: Record<string, unknown> = {
+        size,
+        sort: [{ hit_count: { order: "desc" } }],
+        _source: ["cache_id", "query_type", "channel", "query_text", "hit_count", "created_at", "last_hit_at"],
+      };
+      body["query"] = query_type ? { term: { query_type } } : { match_all: {} };
+
+      const resp = await osClient.search({ index: CACHE_INDEX, body });
+      const hits = (resp.body.hits?.hits ?? []) as unknown as Array<{
+        _source: {
+          query_type: string; channel?: string; query_text: string;
+          hit_count: number; created_at: string; last_hit_at?: string;
+        };
+      }>;
+
+      if (!hits.length) {
+        return { content: [{ type: "text" as const, text: "No cached queries yet." }] };
+      }
+
+      const header = `${"#".padStart(4)}  ${"Hits".padStart(5)}  ${"Type".padEnd(20)}  ${"Channel".padEnd(12)}  Query`;
+      const sep    = "─".repeat(80);
+      const rows   = hits.map((h, i) => {
+        const ch = h._source.channel ?? "—";
+        const q  = h._source.query_text.length > 60
+          ? h._source.query_text.slice(0, 57) + "..."
+          : h._source.query_text;
+        return `${String(i + 1).padStart(4)}  ${String(h._source.hit_count).padStart(5)}  ${h._source.query_type.padEnd(20)}  ${ch.padEnd(12)}  ${q}`;
+      });
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: `Most-queried topics (${hits.length}):\n\n${header}\n${sep}\n${rows.join("\n")}`,
+        }],
       };
     } catch (err) {
       return { content: [{ type: "text" as const, text: `Error: ${String(err)}` }], isError: true };

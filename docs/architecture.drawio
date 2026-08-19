@@ -1,246 +1,276 @@
 <mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="Bob" version="24.0.0" type="github">
   <diagram id="slack-kb-architecture" name="Slack KB Architecture">
-    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1200" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- TITLE                                                        -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="title" value="Slack Knowledge Base — Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1f2328;" vertex="1" parent="1">
-          <mxGeometry x="427" y="30" width="800" height="50" as="geometry" />
+        <!-- TITLE -->
+        <mxCell id="title" value="Slack Knowledge Base — Architecture (v0.5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=22;fontStyle=1;fontColor=#1f2328;" vertex="1" parent="1">
+          <mxGeometry x="450" y="30" width="900" height="50" as="geometry" />
         </mxCell>
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: EXTERNAL (Slack)                                       -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 1: Slack (External)                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
         <mxCell id="lane_slack" value="Slack (External)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="60" y="100" width="260" height="920" as="geometry" />
+          <mxGeometry x="40" y="100" width="240" height="960" as="geometry" />
         </mxCell>
-
         <mxCell id="slack_api" value="Slack Web API&#xa;(conversations.history&#xa;conversations.replies&#xa;users.info)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="lane_slack">
-          <mxGeometry x="30" y="60" width="200" height="80" as="geometry" />
+          <mxGeometry x="20" y="60" width="200" height="80" as="geometry" />
         </mxCell>
-
         <mxCell id="slack_channels" value="Channels&#xa;(#general, #random, …)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="lane_slack">
-          <mxGeometry x="30" y="190" width="200" height="60" as="geometry" />
+          <mxGeometry x="20" y="190" width="200" height="60" as="geometry" />
         </mxCell>
-
         <mxCell id="slack_post" value="chat.postMessage&#xa;(post_message tool)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="lane_slack">
-          <mxGeometry x="30" y="790" width="200" height="60" as="geometry" />
+          <mxGeometry x="20" y="830" width="200" height="60" as="geometry" />
         </mxCell>
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: INGESTION PIPELINE (Python)                           -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 2: Ingestion Pipeline (Python)                        -->
+        <!-- ══════════════════════════════════════════════════════════ -->
         <mxCell id="lane_pipeline" value="Ingestion Pipeline (Python)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="360" y="100" width="310" height="920" as="geometry" />
+          <mxGeometry x="320" y="100" width="290" height="960" as="geometry" />
         </mxCell>
-
-        <mxCell id="cli" value="cli.py&#xa;(Click CLI)&#xa;ingest | ask | search | channels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="lane_pipeline">
-          <mxGeometry x="55" y="50" width="200" height="70" as="geometry" />
-        </mxCell>
-
-        <mxCell id="slack_client" value="SlackIngestionClient&#xa;(ingestion/slack_client.py)&#xa;• list_channels()&#xa;• iter_channel_messages()&#xa;• Retry + rate-limit backoff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
-          <mxGeometry x="55" y="175" width="200" height="100" as="geometry" />
-        </mxCell>
-
-        <mxCell id="chunker" value="Chunker&#xa;(processing/chunker.py)&#xa;• Token-based windowing&#xa;• Preserves thread context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
-          <mxGeometry x="55" y="340" width="200" height="90" as="geometry" />
-        </mxCell>
-
-        <mxCell id="summarizer" value="OllamaSummarizer&#xa;(processing/summarizer.py)&#xa;• Topics / Key Points / Actions&#xa;• Model: llama3.2&#xa;• Retry on failure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
-          <mxGeometry x="55" y="495" width="200" height="100" as="geometry" />
-        </mxCell>
-
-        <mxCell id="pipeline" value="run_pipeline()&#xa;(pipeline.py)&#xa;• Full / Incremental sync&#xa;• Per-channel orchestration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
-          <mxGeometry x="55" y="650" width="200" height="80" as="geometry" />
-        </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: LOCAL AI (Ollama)                                      -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="lane_ollama" value="Local AI — Ollama (localhost:11434)" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="710" y="100" width="270" height="490" as="geometry" />
-        </mxCell>
-
-        <mxCell id="ollama_gen" value="Generation Model&#xa;llama3.2&#xa;(env: OLLAMA_GEN_MODEL)&#xa;&#xa;Used by:&#xa;• OllamaSummarizer&#xa;• KnowledgeBaseQA&#xa;• MCP ask_question" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" vertex="1" parent="lane_ollama">
-          <mxGeometry x="35" y="60" width="200" height="150" as="geometry" />
-        </mxCell>
-
-        <mxCell id="ollama_embed" value="Embedding Model&#xa;nomic-embed-text (768-dim)&#xa;(env: OLLAMA_EMBED_MODEL)&#xa;&#xa;Used by:&#xa;• KnowledgeStore._embed()&#xa;• MCP search_knowledge&#xa;• MCP ask_question" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" vertex="1" parent="lane_ollama">
-          <mxGeometry x="35" y="270" width="200" height="160" as="geometry" />
-        </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: STORAGE (OpenSearch)                                   -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="lane_storage" value="Storage — OpenSearch (localhost:9200)" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="710" y="620" width="270" height="400" as="geometry" />
-        </mxCell>
-
-        <mxCell id="os_index" value="Index: slack_knowledge&#xa;&#xa;Fields:&#xa;• doc_id (sha256[:24])&#xa;• channel_id / channel_name&#xa;• oldest_ts / newest_ts&#xa;• oldest_dt / newest_dt&#xa;• authors[]&#xa;• summary (text / BM25)&#xa;• embedding (knn_vector, 768d)&#xa;• ingested_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;" vertex="1" parent="lane_storage">
-          <mxGeometry x="30" y="55" width="210" height="220" as="geometry" />
-        </mxCell>
-
-        <mxCell id="os_knn" value="k-NN Search&#xa;HNSW · cosine similarity&#xa;ef_search=100, ef_construction=128" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="lane_storage">
-          <mxGeometry x="30" y="305" width="210" height="65" as="geometry" />
-        </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: QUERY LAYER (Python)                                   -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="lane_query" value="Query Layer (Python)" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="100" width="290" height="380" as="geometry" />
-        </mxCell>
-
-        <mxCell id="knowledge_store" value="KnowledgeStore&#xa;(storage/knowledge_store.py)&#xa;&#xa;• upsert() / upsert_many()&#xa;• search() — k-NN&#xa;• list_channels()&#xa;• get_channel_summary()&#xa;• get_newest_ts()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;" vertex="1" parent="lane_query">
-          <mxGeometry x="45" y="55" width="200" height="155" as="geometry" />
-        </mxCell>
-
-        <mxCell id="kb_qa" value="KnowledgeBaseQA&#xa;(query/qa.py)&#xa;&#xa;• ask(question, channel?)&#xa;• RAG: embed → search → generate&#xa;• Returns answer + sources" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;" vertex="1" parent="lane_query">
-          <mxGeometry x="45" y="255" width="200" height="100" as="geometry" />
-        </mxCell>
-
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- LANE: MCP SERVER (TypeScript / Node.js)                      -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <mxCell id="lane_mcp" value="MCP Server (TypeScript · Node.js)" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="1020" y="510" width="290" height="510" as="geometry" />
-        </mxCell>
-
-        <mxCell id="mcp_server" value="McpServer  slack-kb v0.4.0&#xa;(mcp-server/src/index.ts)&#xa;Transport: StdioServerTransport" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
+        <mxCell id="cli" value="cli.py (Click CLI)&#xa;ingest | ask | search&#xa;channels | top-queries" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="lane_pipeline">
           <mxGeometry x="45" y="50" width="200" height="70" as="geometry" />
         </mxCell>
+        <mxCell id="slack_client" value="SlackIngestionClient&#xa;(ingestion/slack_client.py)&#xa;• list_channels()&#xa;• iter_channel_messages()&#xa;• Retry + rate-limit backoff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
+          <mxGeometry x="45" y="175" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="chunker" value="Chunker&#xa;(processing/chunker.py)&#xa;• Token-based windowing&#xa;• Preserves thread context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
+          <mxGeometry x="45" y="335" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="summarizer" value="OllamaSummarizer&#xa;(processing/summarizer.py)&#xa;• Topics / Key Points / Actions&#xa;• Model: llama3.2&#xa;• Retry on failure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
+          <mxGeometry x="45" y="475" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="pipeline" value="run_pipeline()&#xa;(pipeline.py)&#xa;• Full / Incremental sync&#xa;• Per-channel orchestration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_pipeline">
+          <mxGeometry x="45" y="635" width="200" height="80" as="geometry" />
+        </mxCell>
 
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 3: Local AI (Ollama)                                  -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="lane_ollama" value="Local AI — Ollama (localhost:11434)" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="650" y="100" width="260" height="490" as="geometry" />
+        </mxCell>
+        <mxCell id="ollama_gen" value="Generation Model&#xa;llama3.2&#xa;(env: OLLAMA_GEN_MODEL)&#xa;&#xa;Used by:&#xa;• OllamaSummarizer&#xa;• KnowledgeBaseQA&#xa;• MCP ask_question" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" vertex="1" parent="lane_ollama">
+          <mxGeometry x="30" y="55" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ollama_embed" value="Embedding Model&#xa;nomic-embed-text (768-dim)&#xa;(env: OLLAMA_EMBED_MODEL)&#xa;&#xa;Used by:&#xa;• KnowledgeStore._embed()&#xa;• ResponseCache._embed()&#xa;• MCP cache helpers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;" vertex="1" parent="lane_ollama">
+          <mxGeometry x="30" y="265" width="200" height="165" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 4: Storage (OpenSearch)                               -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="lane_storage" value="Storage — OpenSearch (localhost:9200)" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="650" y="620" width="260" height="440" as="geometry" />
+        </mxCell>
+        <mxCell id="os_index" value="Index: slack_knowledge&#xa;&#xa;• doc_id · channel_id/name&#xa;• oldest_ts / newest_ts&#xa;• oldest_dt / newest_dt&#xa;• authors[] · summary&#xa;• embedding (knn_vector 768d)&#xa;• ingested_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;" vertex="1" parent="lane_storage">
+          <mxGeometry x="20" y="50" width="220" height="155" as="geometry" />
+        </mxCell>
+        <mxCell id="os_cache" value="Index: response_cache  🆕&#xa;&#xa;• cache_id · query_type&#xa;• channel · query_text&#xa;• answer_text · sources[]&#xa;• hit_count · embedding&#xa;• created_at · last_hit_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;" vertex="1" parent="lane_storage">
+          <mxGeometry x="20" y="230" width="220" height="155" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 5: Query Layer (Python)                               -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="lane_query" value="Query Layer (Python)" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="960" y="100" width="280" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="knowledge_store" value="KnowledgeStore&#xa;(storage/knowledge_store.py)&#xa;&#xa;• upsert_many()&#xa;• search() — k-NN&#xa;• list_channels()&#xa;• get_channel_summary()&#xa;• get_newest_ts()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;" vertex="1" parent="lane_query">
+          <mxGeometry x="40" y="55" width="200" height="155" as="geometry" />
+        </mxCell>
+        <mxCell id="response_cache" value="ResponseCache  🆕&#xa;(storage/response_cache.py)&#xa;&#xa;• lookup() — k-NN + threshold&#xa;• store() — persist entry&#xa;• top_queries() — analytics&#xa;• _increment_hit()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;" vertex="1" parent="lane_query">
+          <mxGeometry x="40" y="255" width="200" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 6: Q&A + Cache Flow (Python)                          -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="lane_qa" value="Q&amp;A + Cache Flow (Python)" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="960" y="560" width="280" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="kb_qa" value="KnowledgeBaseQA&#xa;(query/qa.py)&#xa;&#xa;1. cache.lookup()&#xa;   → HIT: return cached answer&#xa;   → MISS: continue&#xa;2. store.search() — k-NN&#xa;3. ollama.generate()&#xa;4. cache.store()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;" vertex="1" parent="lane_qa">
+          <mxGeometry x="40" y="55" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="cache_hit_box" value="⚡ Cache HIT&#xa;answer_text returned&#xa;hit_count incremented&#xa;similar_query shown to user&#xa;0 LLM tokens spent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;" vertex="1" parent="lane_qa">
+          <mxGeometry x="40" y="285" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cache_miss_box" value="Cache MISS&#xa;Full RAG executed&#xa;Result stored in cache&#xa;for next invocation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;" vertex="1" parent="lane_qa">
+          <mxGeometry x="40" y="405" width="200" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LANE 7: MCP Server (TypeScript)                            -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="lane_mcp" value="MCP Server (TypeScript · Node.js)  v0.5.0" style="swimlane;startSize=30;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="100" width="280" height="960" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp_server" value="McpServer slack-kb v0.5.0&#xa;(mcp-server/src/index.ts)&#xa;Transport: StdioServerTransport" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
+          <mxGeometry x="40" y="50" width="200" height="65" as="geometry" />
+        </mxCell>
         <mxCell id="tool_list" value="list_channels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="150" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="150" width="200" height="38" as="geometry" />
         </mxCell>
         <mxCell id="tool_search" value="search_knowledge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="205" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="200" width="200" height="38" as="geometry" />
         </mxCell>
-        <mxCell id="tool_summary" value="get_channel_summary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="260" width="200" height="40" as="geometry" />
+        <mxCell id="tool_summary" value="get_channel_summary  (+ cache)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="lane_mcp">
+          <mxGeometry x="40" y="250" width="200" height="38" as="geometry" />
         </mxCell>
-        <mxCell id="tool_ask" value="ask_question  (RAG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="315" width="200" height="40" as="geometry" />
+        <mxCell id="tool_ask" value="ask_question  (RAG + cache)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="lane_mcp">
+          <mxGeometry x="40" y="300" width="200" height="38" as="geometry" />
         </mxCell>
         <mxCell id="tool_post" value="post_message" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="370" width="200" height="40" as="geometry" />
+          <mxGeometry x="40" y="350" width="200" height="38" as="geometry" />
         </mxCell>
-
+        <mxCell id="tool_topq" value="top_queries  🆕  (opportunity map)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="lane_mcp">
+          <mxGeometry x="40" y="400" width="200" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp_cache_helpers" value="cacheLookup()&#xa;cacheStore()&#xa;cacheIncrement()&#xa;sha256Prefix()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;" vertex="1" parent="lane_mcp">
+          <mxGeometry x="40" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
         <mxCell id="mcp_client" value="AI Assistant (Bob / Claude / etc.)&#xa;via MCP Protocol (stdio)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontColor=#333333;" vertex="1" parent="lane_mcp">
-          <mxGeometry x="45" y="440" width="200" height="55" as="geometry" />
+          <mxGeometry x="40" y="870" width="200" height="55" as="geometry" />
         </mxCell>
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- ARROWS — INGESTION FLOW                                      -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-
-        <!-- cli → slack_client -->
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="cli" target="slack_client" parent="lane_pipeline">
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- EDGES — Ingestion flow                                     -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <mxCell id="e_cli_slk" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="cli" target="slack_client" parent="lane_pipeline">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <!-- cli → pipeline -->
-        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="cli" target="pipeline" parent="lane_pipeline">
+        <mxCell id="e_cli_pipe" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="cli" target="pipeline" parent="lane_pipeline">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <!-- slack_client → chunker -->
-        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="slack_client" target="chunker" parent="lane_pipeline">
+        <mxCell id="e_slk_chunk" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="slack_client" target="chunker" parent="lane_pipeline">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <!-- chunker → summarizer -->
-        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="chunker" target="summarizer" parent="lane_pipeline">
+        <mxCell id="e_chunk_sum" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="chunker" target="summarizer" parent="lane_pipeline">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <!-- summarizer → pipeline -->
-        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="summarizer" target="pipeline" parent="lane_pipeline">
+        <mxCell id="e_sum_pipe" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="summarizer" target="pipeline" parent="lane_pipeline">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Slack API → SlackIngestionClient (cross-lane) -->
-        <mxCell id="e6" value="SLACK_BOT_TOKEN" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" edge="1" source="slack_api" target="slack_client" parent="1">
+        <!-- Slack API → SlackIngestionClient -->
+        <mxCell id="e_api_slk" value="SLACK_BOT_TOKEN" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="slack_api" target="slack_client" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Summarizer → Ollama Gen (cross-lane) -->
-        <mxCell id="e7" value="generate()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="summarizer" target="ollama_gen" parent="1">
+        <!-- Summarizer → Ollama Gen -->
+        <mxCell id="e_sum_gen" value="generate()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="summarizer" target="ollama_gen" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Pipeline → KnowledgeStore (upsert) -->
-        <mxCell id="e8" value="upsert_many()" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="pipeline" target="knowledge_store" parent="1">
+        <!-- Pipeline → KnowledgeStore -->
+        <mxCell id="e_pipe_ks" value="upsert_many()" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="pipeline" target="knowledge_store" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- KnowledgeStore → Ollama Embed -->
-        <mxCell id="e9" value="embed()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="knowledge_store" target="ollama_embed" parent="1">
+        <mxCell id="e_ks_embed" value="embed()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="knowledge_store" target="ollama_embed" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- KnowledgeStore → OpenSearch Index -->
-        <mxCell id="e10" value="bulk index / search" style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="knowledge_store" target="os_index" parent="1">
+        <!-- KnowledgeStore → OpenSearch slack_knowledge -->
+        <mxCell id="e_ks_os" value="bulk / search" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="knowledge_store" target="os_index" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ResponseCache → Ollama Embed -->
+        <mxCell id="e_rc_embed" value="embed()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="response_cache" target="ollama_embed" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ResponseCache → OpenSearch response_cache -->
+        <mxCell id="e_rc_os" value="k-NN / index" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="response_cache" target="os_cache" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CLI → KnowledgeBaseQA -->
+        <mxCell id="e_cli_qa" value="ask / search" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="cli" target="kb_qa" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- KnowledgeBaseQA → ResponseCache -->
+        <mxCell id="e_qa_rc" value="lookup / store" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="kb_qa" target="response_cache" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- KnowledgeBaseQA → KnowledgeStore -->
-        <mxCell id="e11" value="search()" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="kb_qa" target="knowledge_store" parent="lane_query">
+        <mxCell id="e_qa_ks" value="search()" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="kb_qa" target="knowledge_store" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- KnowledgeBaseQA → Ollama Gen (RAG) -->
-        <mxCell id="e12" value="generate()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="kb_qa" target="ollama_gen" parent="1">
+        <mxCell id="e_qa_gen" value="generate()" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="kb_qa" target="ollama_gen" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- CLI → KnowledgeBaseQA (ask command) -->
-        <mxCell id="e13" value="ask / search" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="cli" target="kb_qa" parent="1">
+        <!-- KnowledgeBaseQA → hit/miss decision -->
+        <mxCell id="e_qa_hit" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="kb_qa" target="cache_hit_box" parent="lane_qa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_qa_miss" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="kb_qa" target="cache_miss_box" parent="lane_qa">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- MCP tools → OpenSearch (direct) -->
-        <mxCell id="e14" value="search / agg" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="tool_search" target="os_index" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.85;entryDx=0;entryDy=0;" edge="1" source="tool_summary" target="os_index" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.95;entryDx=0;entryDy=0;" edge="1" source="tool_list" target="os_index" parent="1">
+        <!-- MCP helpers → OpenSearch response_cache -->
+        <mxCell id="e_mcp_cache" value="k-NN / index / update" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="mcp_cache_helpers" target="os_cache" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- MCP ask_question → Ollama (embed + generate) -->
-        <mxCell id="e17" value="embed + generate" style="edgeStyle=orthogonalEdgeStyle;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.9;entryDx=0;entryDy=0;" edge="1" source="tool_ask" target="ollama_embed" parent="1">
+        <!-- MCP tools → OpenSearch slack_knowledge -->
+        <mxCell id="e_mcp_search" value="search / agg" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_search" target="os_index" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_sum" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_summary" target="os_index" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_list" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_list" target="os_index" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_topq" value="hit_count sort" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_topq" target="os_cache" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- MCP ask/summary → cache helpers -->
+        <mxCell id="e_ask_cache" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="tool_ask" target="mcp_cache_helpers" parent="lane_mcp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sumtool_cache" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="tool_summary" target="mcp_cache_helpers" parent="lane_mcp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- MCP ask_question → Ollama embed + generate -->
+        <mxCell id="e_mcp_embed" value="embed" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_ask" target="ollama_embed" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_gen" value="generate" style="edgeStyle=orthogonalEdgeStyle;dashed=1;" edge="1" source="tool_ask" target="ollama_gen" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- MCP post_message → Slack -->
-        <mxCell id="e18" value="chat.postMessage" style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="tool_post" target="slack_post" parent="1">
+        <mxCell id="e_post_slack" value="chat.postMessage" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="tool_post" target="slack_post" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- AI Client → MCP Server -->
-        <mxCell id="e19" value="MCP calls" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_client" target="mcp_server" parent="lane_mcp">
+        <mxCell id="e_ai_mcp" value="MCP calls" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_client" target="mcp_server" parent="lane_mcp">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- MCP Server → tools (internal routing) -->
-        <mxCell id="e20" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_list" parent="lane_mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e21" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_search" parent="lane_mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e22" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_summary" parent="lane_mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e23" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_ask" parent="lane_mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e24" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_post" parent="lane_mcp">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
+        <!-- MCP server → tools -->
+        <mxCell id="e_s_t1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_list" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_t2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_search" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_t3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_summary" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_t4" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_ask" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_t5" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_post" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_t6" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="mcp_server" target="tool_topq" parent="lane_mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
 
       </root>
     </mxGraphModel>

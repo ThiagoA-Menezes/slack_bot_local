@@ -92,11 +92,19 @@ def ask(question, channel):
     """Ask a question and get an answer grounded in the knowledge base."""
     from slack_kb.query.qa import KnowledgeBaseQA
     from slack_kb.storage.knowledge_store import KnowledgeStore
+    from slack_kb.storage.response_cache import ResponseCache
 
     store = KnowledgeStore.from_env()
-    qa = KnowledgeBaseQA.from_env(store)
+    cache = ResponseCache.from_env()
+    qa = KnowledgeBaseQA.from_env(store, cache)
     result = qa.ask(question, channel_name=channel)
 
+    if result["cache_hit"]:
+        click.echo(
+            "\n" + click.style("⚡ Resposta em cache", fg="yellow", bold=True)
+            + f"  (pergunta similar feita {result['hit_count']}x)"
+        )
+        click.echo(click.style(f"  Pergunta original: ", dim=True) + result["similar_query"])
     click.echo("\n" + click.style("Answer:", bold=True))
     click.echo(result["answer"])
 
@@ -143,6 +151,34 @@ def search(query, top, channel):
 # ---------------------------------------------------------------------------
 # channels  (interactive browser)
 # ---------------------------------------------------------------------------
+
+@cli.command("top-queries")
+@click.option("--type", "query_type", default=None,
+              type=click.Choice(["ask_question", "get_channel_summary"]),
+              help="Filter by query type (default: all).")
+@click.option("--top", "-n", default=20, show_default=True,
+              help="Number of entries to display.")
+def top_queries(query_type, top):
+    """Show the most-queried topics — useful for opportunity mapping."""
+    from slack_kb.storage.response_cache import ResponseCache
+
+    cache = ResponseCache.from_env()
+    rows = cache.top_queries(query_type=query_type, size=top)
+
+    if not rows:
+        click.echo("No cached queries yet.")
+        return
+
+    click.echo(
+        "\n" + click.style(f"{'#':>4}  {'Hits':>5}  {'Type':<20}  {'Channel':<12}  Query", bold=True)
+    )
+    click.echo("─" * 80)
+    for row in rows:
+        ch = row["channel"] or "—"
+        click.echo(
+            f"{row['rank']:>4}  {row['hit_count']:>5}  {row['query_type']:<20}  {ch:<12}  {row['query_text'][:60]}"
+        )
+
 
 @cli.command()
 def channels():
